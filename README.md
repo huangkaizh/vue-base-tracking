@@ -1,3 +1,7 @@
+# vue-base-tracking
+demo for [web-event-tracking](https://github.com/huangkaizh/event-tracking)
+
+
 # vue-base
 
 webpack4+vue+less+eslint+vscode 脚手架  
