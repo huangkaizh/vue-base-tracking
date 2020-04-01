@@ -3,6 +3,11 @@
     pageA
     <PageAChild />
     <span>{{ obj.a }}</span>
+    </br>
+    </br>
+    <router-link to="pageB">pageB</router-link>
+    </br>
+    <router-link to="pageC">pageC</router-link>
   </div>
 </template>
 

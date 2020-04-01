@@ -1,6 +1,11 @@
 <template>
   <div>
     pageC
+    </br>
+    </br>
+    <router-link to="pageA">pageA</router-link>
+    </br>
+    <router-link to="pageB">pageB</router-link>
   </div>
 </template>
 

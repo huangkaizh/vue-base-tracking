@@ -1,6 +1,11 @@
 <template>
   <div>
     pageB
+    </br>
+    </br>
+    <router-link to="pageA">pageA</router-link>
+    </br>
+    <router-link to="pageC">pageC</router-link>
     <div class="click-area red" @click.stop.prevent="clickFunc($event)">
       clickArea
     </div>
