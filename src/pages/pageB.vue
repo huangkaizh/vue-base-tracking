@@ -47,7 +47,7 @@ export default {
   methods: {
     clickFunc(e) {
       console.log('clickFunc')
-      window.clickTracking(e)
+      window.tracking.click(e)
     }
   }
 }

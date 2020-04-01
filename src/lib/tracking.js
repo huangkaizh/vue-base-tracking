@@ -213,7 +213,6 @@
       browser['chrome'] = s[1]
       var type = _getChromiumType(browser['chrome'])
       if (type) {
-        browser['chrome'] += '(' + type + ')'
         browser['type'] = type
       }
     } else if ((s = ua.match(/opera.([\d.]+)/))) {
@@ -230,9 +229,6 @@
     }
 
     var system = {}
-
-    // detect platform
-    //        var p = navigator.platform.toLowerCase();
     if (ua.indexOf('iphone') > -1) {
       system.name = 'iphone'
       system.iphone = getIOSVersion(ua)
@@ -315,21 +311,50 @@
 })()
 
 var tracking = {
-  trackingServerUrl: 'http://172.16.5.125:5140/pushdata', // 埋点服务器接口url
+  // trackingServerUrl: 'http://172.16.5.125:5140/pushdata', // 埋点服务器接口url
+  trackingServerUrl: 'http://pushdata.zcmorefun.com/',
   appid: 'e1a51f2257934e99',
   token: 'MzExNTg4NjkzNjMwNzc3\u003d',
-  distinctIdKey: 'distinctId', // cookie中用来存区分用户的key
+  distinctIdKey: 'distinctId', // cookie中用来存用户ID的key
   sourceKey: 'source', // url中用来标记来源渠道的key
   defaultSource: 'message', // 默认来源渠道
+  interval: null, // 发送间隔, 单位毫秒
+  intervalId: null,
   phone: null,
+  events: [],
+  setConfig: function(config) {
+    Object.assign(this, config)
+  },
+  click: function(e) {
+    var position = [e.pageX, e.pageY]
+    var id = e.target.id
+    var className = e.target.className
+    var nodeName = e.target.nodeName
+    var targetEle = {
+      nodeName: nodeName,
+      id: id,
+      className: className
+    }
+    var pageWidth = document.documentElement.offsetWidth
+    var pageHeight = document.documentElement.offsetHeight
+    var currentUrl = window.location.href
+    tracking.addEvent({
+      event: 'click',
+      pageWidth: pageWidth,
+      pageHeight: pageHeight,
+      position: position,
+      targetEle: targetEle,
+      currentUrl: currentUrl
+    })
+  },
   toThirdPartyPayment: function(thirdPartyPayment) {
-    this.trackingPost({
+    this.addEvent({
       event: 'toThirdPartyPayment',
       thirdPartyPayment: thirdPartyPayment // 第三方支付类别（微信、支付宝等）
     })
   },
   toJLT: function() {
-    this.trackingPost({
+    this.addEvent({
       event: 'toJLT' // 跳转至家乐淘
     })
   },
@@ -337,23 +362,23 @@ var tracking = {
     this.phone = phone
   }, // 设置手机号
   submitRightCaptcha: function() {
-    this.trackingPost({
+    this.addEvent({
       event: 'submitRightCaptcha'
     })
   }, // 验证码输入正确
   submitWrongCaptcha: function() {
-    this.trackingPost({
+    this.addEvent({
       event: 'submitWrongCaptcha'
     })
   }, // 验证码输入错误
   switchCaptcha: function() {
-    this.trackingPost({
+    this.addEvent({
       event: 'switchCaptcha'
     })
   }, // 切换验证码
-  getBrowser: function() {
+  getEnv: function() {
     return window.brw.browserInfo || {}
-  },
+  }, // 获取环境信息（系统及浏览器信息）
 
   /**
    * [通过参数名获取url中的参数值]
@@ -431,33 +456,33 @@ var tracking = {
 
   getCommonParams: function() {
     var distinctId = this.getDistinctId()
-    var browser = this.getBrowser()
-    console.log('browser: ', browser)
-
-    var ua = navigator.userAgent.toLowerCase()
-    console.log('ua: ', ua)
+    var env = this.getEnv()
     var time = this.getTime()
     var source = this.getSource()
     var commonParams = {
       distinctId: distinctId,
       source: source,
       time: time,
-      browser: browser
+      env: env
     }
     if (tracking.phone) commonParams.phone = tracking.phone
-    console.log('commonParams: ', commonParams)
     return commonParams
   },
 
-  trackingPost: function(eventParams) {
+  addEvent: function(eventParams) {
     var commonParams = this.getCommonParams()
     var event = Object.assign(commonParams, eventParams)
+    this.events.push(JSON.stringify(event))
+  },
+
+  trackingPost: function() {
+    if (!tracking.events || tracking.events.length === 0) return
     var params = {
-      appid: this.appid,
-      token: this.token,
-      events: [JSON.stringify(event)]
+      appid: tracking.appid,
+      token: tracking.token,
+      events: JSON.parse(JSON.stringify(tracking.events))
     }
-    this.post(
+    tracking.post(
       tracking.trackingServerUrl,
       {
         'Content-Type': 'application/json'
@@ -465,17 +490,19 @@ var tracking = {
       },
       JSON.stringify(params)
     )
+    tracking.events = []
   },
 
   post: function(url, headers, params, callback) {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', url)
+    xhr.open('post', url)
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
           var responseText = xhr.responseText // 返回结果
+          if (!responseText) return
           var res = JSON.parse(responseText)
-          if (res.errcode === '0000') {
+          if (res.code === '200') {
             if (callback) callback(res)
           } else {
             console.log(res.msg)
@@ -515,7 +542,7 @@ var tracking = {
 window.history.onpushstate = function(args) {
   var currentUrl = window.location.href
   var targetUrl = args[2]
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'pushState',
     currentUrl: currentUrl,
     targetUrl: targetUrl
@@ -525,7 +552,7 @@ window.history.onpushstate = function(args) {
 window.history.onreplacestate = function(args) {
   var currentUrl = window.location.href
   var targetUrl = args[2]
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'replaceState',
     currentUrl: currentUrl,
     targetUrl: targetUrl
@@ -535,7 +562,7 @@ window.history.onreplacestate = function(args) {
 window.onhashchange = function(e) {
   var currentUrl = e.newUrl
   var sourceUrl = e.oldUrl
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'hashChange',
     sourceUrl: sourceUrl,
     currentUrl: currentUrl
@@ -544,7 +571,7 @@ window.onhashchange = function(e) {
 
 window.onpopstate = function(e) {
   var currentUrl = e.target.location.href
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'popState',
     currentUrl: currentUrl
   })
@@ -552,15 +579,28 @@ window.onpopstate = function(e) {
 
 window.onunload = function(e) {
   var currentUrl = e.target.location.href
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'unload',
     currentUrl: currentUrl
   })
+  clearInterval(tracking.intervalId)
+  tracking.intervalId = null
+  tracking.trackingPost()
+  window.history.onpushstate = null
+  window.history.onreplacestate = null
+  window.onhashchange = null
+  window.onpopstate = null
+  window.onload = null
+  window.onbeforeunload = null
+  window.onload = null
+  window.onclick = null
+  window.tracking = null
+  tracking = null
 }
 
 window.onbeforeunload = function(e) {
   var currentUrl = e.target.location.href
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'beforeUnload',
     currentUrl: currentUrl
   })
@@ -568,34 +608,12 @@ window.onbeforeunload = function(e) {
 
 window.onload = function(e) {
   var currentUrl = e.target.location.href
-  tracking.trackingPost({
+  tracking.addEvent({
     event: 'load',
     currentUrl: currentUrl
   })
+  tracking.intervalId = setInterval(tracking.trackingPost, tracking.interval)
 }
 
-window.clickTracking = function(e) {
-  var position = [e.pageX, e.pageY]
-  var id = e.target.id
-  var className = e.target.className
-  var nodeName = e.target.nodeName
-  var targetEle = {
-    nodeName: nodeName,
-    id: id,
-    className: className
-  }
-  var pageWidth = document.documentElement.offsetWidth
-  var pageHeight = document.documentElement.offsetHeight
-  var currentUrl = window.location.href
-  tracking.trackingPost({
-    event: 'click',
-    pageWidth: pageWidth,
-    pageHeight: pageHeight,
-    position: position,
-    targetEle: targetEle,
-    currentUrl: currentUrl
-  })
-}
-
-window.onclick = window.clickTracking
+window.onclick = tracking.click
 window.tracking = tracking
