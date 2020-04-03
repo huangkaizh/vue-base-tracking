@@ -7,9 +7,9 @@ import 'web-event-tracking/dist/index.min'
 import VConsole from 'vconsole'
 
 window.tracking.setConfig({
-  trackingServerUrl: 'http://pushdata.zcmorefun.com/', // 埋点服务器接口url
-  appid: 'e1a51f2257934e99',
-  token: 'MzExNTg4NjkzNjMwNzc3\u003d',
+  trackingServerUrl: 'http://tracking.abc.com/', // 埋点服务器接口url
+  appid: 'b1651f4562174c06',
+  token: 'kgfk8i987kgfkjhwer\u1234',
   distinctIdKey: 'distinctId', // cookie中用来存区分用户的key
   sourceKey: 'source', // url中用来标记来源渠道的key
   defaultSource: 'message', // 默认来源渠道

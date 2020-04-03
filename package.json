@@ -80,6 +80,6 @@
     "vconsole": "^3.3.4",
     "vue": "^2.6.10",
     "vue-router": "^3.1.3",
-    "web-event-tracking": "^1.0.7"
+    "web-event-tracking": "^1.0.11"
   }
 }
